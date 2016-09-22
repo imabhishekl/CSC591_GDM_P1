@@ -1,9 +1,11 @@
+from random import randint
 from graphframes import *
 from pyspark.sql import SQLContext,Row
 from pyspark import SparkContext, SparkConf
 from math import *
 import math
 import matplotlib.pyplot as pyplot
+import networkx
 
 class Degree:
 	sc = None
@@ -12,6 +14,7 @@ class Degree:
 	sqlContext = None
 	res_graph = None
 	total_vertex = None
+	nx_res = None
 	x_list = list()
 	y_list = list()
 
@@ -23,16 +26,16 @@ class Degree:
 		self.sqlContext=SQLContext(self.sc)
 
 	def createGF(self):
-		in_file = self.sc.textFile("/home/abhishek/Downloads/network/stanford_graphs/youtube.graph.small")
-		op_rdd = in_file.map(lambda line: line.split(",")).map(lambda line : Row(src=line[0],dst=line[1]))
-		edge_df = self.sqlContext.createDataFrame(op_rdd)
-		edge_df.registerTempTable("edge_list")
-		vertice_df = self.sqlContext.sql("SELECT distinct src as id from edge_list UNION SELECT distinct dst as id from edge_list")
-		self.total_vertex = vertice_df.count()
-		self.res_graph = GraphFrame(vertice_df,edge_df)
+		self.generateGF()
+		vertexDF = self.sqlContext.createDataFrame(self.sc.parallelize(self.nx_res.nodes()).map(lambda x: Row(x)),['id'])
+		edgeDF = self.sqlContext.createDataFrame(self.nx_res.edges(),['src','dst'] )
+		#edge_df.registerTempTable("edge_list")
+		#vertice_df = self.sqlContext.sql("SELECT distinct src as id from edge_list UNION SELECT distinct dst as id from edge_list")
+		self.total_vertex = vertexDF.count()
+		self.res_graph = GraphFrame(vertexDF,edgeDF)
 
 	def execute(self):
-		createGF()
+		self.createGF()
 		self.res_graph.inDegrees.show()
 		degree_list = self.res_graph.outDegrees
 		degree_list.registerTempTable("degree")
@@ -58,6 +61,9 @@ class Degree:
 		pyplot.ylabel('gamma')
 		pyplot.plot(self.x_list,self.y_list)
 		pyplot.show()
+
+	def generateGF(self):
+		self.nx_res = networkx.gnm_random_graph(10,25,randint(0,10),False)
 
 def main():
 	d = Degree()
