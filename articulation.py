@@ -1,6 +1,7 @@
 from graphframes import *
 from pyspark.sql import SQLContext,Row
 from pyspark import SparkContext, SparkConf
+import sys
 
 conf = SparkConf().setAppName("Articulation Points Finder").setMaster('local')
 sc = SparkContext(conf=conf)
@@ -35,15 +36,12 @@ def articulations(gf):
     gf_vertexDF.unpersist()
     return articulation_df
 
-edge_RDD = sc.textFile('../network/9_11_edgelist.txt').map(lambda x: x.split(',')).map(lambda x: Row(src=x[0], dst=x[1]))
+
+edge_RDD = sc.textFile(str(sys.argv[1])).map(lambda x: x.split(',')).map(lambda x: Row(src=x[0], dst=x[1]))
 edge_DF = sqlContext.createDataFrame(edge_RDD)
 edge_DF.registerTempTable("EdgeDF")
 vertexDF = sqlContext.sql("SELECT distinct src as id from EdgeDF UNION SELECT distinct dst as id from EdgeDF")
-
 g= GraphFrame(vertexDF, edge_DF)
-
-vertex_list = vertexDF.rdd.map(lambda x: x[0]).collect()
-
 articulation_df = articulations(g)
 articulation_df.show()
 
