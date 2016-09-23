@@ -14,9 +14,10 @@ def filterShortestPathRDD(rddelem,v1):
             return True
     return False
 
-def closeness(vertex_list,gf):
+def closeness(gf):
     closeness_values = list()
     #GraphFrame cached to speed up iterative computation
+    vertex_list= gf.vertices.rdd.map(lambda x: x[0]).collect()
     gf.cache()
     for vertex in vertex_list:
         #Valid Path values summed up using reduce to get summation of Shortest Paths
@@ -74,9 +75,7 @@ edge_DF = sqlContext.createDataFrame([
 
 g= GraphFrame(vertex_DF, edge_DF)
 
-vertex_list = vertex_DF.rdd.map(lambda x: x[0]).collect()
-
-closeness_df = closeness(vertex_list,g)
+closeness_df = closeness(g)
 closeness_df.orderBy("closeness",ascending=False).show()
 
 sc.stop()
